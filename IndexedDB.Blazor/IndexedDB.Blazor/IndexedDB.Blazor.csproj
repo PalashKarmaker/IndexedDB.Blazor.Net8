@@ -8,7 +8,7 @@
 		<LangVersion>preview</LangVersion>
 		<IsPackable>true</IsPackable>
 		<AssemblyName>IndexedDB.Blazor.Net8</AssemblyName>
-		<Version>1.2.0</Version>
+		<Version>1.2.1</Version>
 		<Authors>Palash</Authors>
 		<Description>A Blazor library for accessing IndexedDB</Description>
 		<RepositoryUrl>https://github.com/Jinjinov/IndexedDB.Blazor.git</RepositoryUrl>

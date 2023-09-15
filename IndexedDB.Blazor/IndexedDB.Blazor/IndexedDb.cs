@@ -1,14 +1,10 @@
 ﻿using IndexedDB.Blazor.Attributes;
 using IndexedDB.Blazor.Extensions;
 using Microsoft.JSInterop;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using TG.Blazor.IndexedDB;
 
 namespace IndexedDB.Blazor
@@ -81,8 +77,9 @@ namespace IndexedDB.Blazor
 
                 // Find pk here to reduce required save time if more than one row has been deleted 
                 PropertyInfo pkProperty = null;
-
-                foreach (var row in indexedSet.GetType().GetMethod("GetChanged", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(indexedSet, null) as IEnumerable<IndexedEntity>)
+                if (indexedSet?.GetType().GetMethod("GetChanged", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(indexedSet, null) is not IEnumerable<IndexedEntity> lst)
+                    return;
+                foreach (var row in lst)
                 {
                     Debug.WriteLine($"Saving row");
                     switch (row.State)

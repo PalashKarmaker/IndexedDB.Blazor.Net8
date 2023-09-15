@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Linq.Expressions;
 
 namespace IndexedDB.Blazor.Extensions
@@ -11,7 +10,7 @@ namespace IndexedDB.Blazor.Extensions
             var lambda = navigationPropertyPath as LambdaExpression;
             var member = lambda.Body as MemberExpression;
 
-            var memberName = member.Member.Name;
+            var memberName = member?.Member.Name;
             Debug.WriteLine(memberName);
 
             return source;

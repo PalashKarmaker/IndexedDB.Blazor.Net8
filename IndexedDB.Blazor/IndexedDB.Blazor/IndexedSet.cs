@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
 
 namespace IndexedDB.Blazor
@@ -12,11 +9,11 @@ namespace IndexedDB.Blazor
         /// <summary>
         /// The internal stored items
         /// </summary>
-        private readonly IList<IndexedEntity<T>> internalItems;
+        private readonly List<IndexedEntity<T>> internalItems;
         /// <summary>
         /// The type T primary key, only != null if at least once requested by remove
         /// </summary>
-        private PropertyInfo primaryKey;
+        private readonly PropertyInfo primaryKey;
 
         // ToDo: Remove PK dependency
         public IndexedSet(IEnumerable<T> records, PropertyInfo primaryKey)
@@ -38,7 +35,7 @@ namespace IndexedDB.Blazor
                     State = EntityState.Unchanged
                 };
 
-                this.internalItems.Add(indexedItem);
+                internalItems.Add(indexedItem);
             }
 
             Debug.WriteLine($"{nameof(IndexedEntity)} - Construct - Add records DONE");
@@ -46,15 +43,15 @@ namespace IndexedDB.Blazor
 
         public bool IsReadOnly => false;
 
-        public int Count => this.internalItems.Count();
+        public int Count => internalItems.Count;
 
         public void Add(T item)
         {
-            if (!this.internalItems.Select(x => x.Instance).Contains(item))
+            if (!internalItems.Select(x => x.Instance).Contains(item))
             {
                 Debug.WriteLine($"{nameof(IndexedEntity)} - Added item of type {typeof(T).Name}");
 
-                this.internalItems.Add(new IndexedEntity<T>(item)
+                internalItems.Add(new IndexedEntity<T>(item)
                 {
                     State = EntityState.Added
                 });
@@ -89,9 +86,9 @@ namespace IndexedDB.Blazor
             {
                 Debug.WriteLine("Searching for equality with PK");
 
-                var value = this.primaryKey.GetValue(item);
+                var value = primaryKey.GetValue(item);
 
-                internalItem = this.internalItems.FirstOrDefault(x => this.primaryKey.GetValue(x.Instance).Equals(value));
+                internalItem = this.internalItems.FirstOrDefault(x => primaryKey.GetValue(x.Instance).Equals(value));
 
                 if (internalItem != null)
                 {
@@ -138,13 +135,10 @@ namespace IndexedDB.Blazor
 
         public void CopyTo(T[] array, int arrayIndex)
         {
-            if (array == null)
-                throw new ArgumentNullException("array");
-            if (arrayIndex < 0)
-                throw new ArgumentOutOfRangeException("arrayIndex");
+            ArgumentNullException.ThrowIfNull(array);
+            ArgumentOutOfRangeException.ThrowIfNegative(arrayIndex);
             if (array.Length - arrayIndex < Count)
                 throw new ArgumentException("Not enough elements after arrayIndex in the destination array.");
-
             for (int i = 0; i < Count; ++i)
                 array[i + arrayIndex] = this.internalItems[i].Instance;
         }

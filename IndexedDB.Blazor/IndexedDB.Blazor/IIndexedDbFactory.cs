@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace IndexedDB.Blazor
+﻿namespace IndexedDB.Blazor
 {
     public interface IIndexedDbFactory
     {

@@ -19,24 +19,18 @@ namespace IndexedDB.Blazor
         public IndexedSet(IEnumerable<T> records, PropertyInfo primaryKey)
         {
             this.primaryKey = primaryKey;
-            this.internalItems = new List<IndexedEntity<T>>();
+            internalItems = new List<IndexedEntity<T>>();
 
             if (records == null)
-            {
                 return;
-            }
 
             Debug.WriteLine($"{nameof(IndexedEntity)} - Construct - Add records");
 
             foreach (var item in records)
-            {
-                var indexedItem = new IndexedEntity<T>(item)
+                internalItems.Add(new IndexedEntity<T>(item)
                 {
                     State = EntityState.Unchanged
-                };
-
-                internalItems.Add(indexedItem);
-            }
+                });
 
             Debug.WriteLine($"{nameof(IndexedEntity)} - Construct - Add records DONE");
         }
@@ -61,15 +55,10 @@ namespace IndexedDB.Blazor
         public void Clear()
         {
             foreach (var item in this)
-            {
-                this.Remove(item);
-            }
+                Remove(item);
         }
 
-        public bool Contains(T item)
-        {
-            return Enumerable.Contains(this, item);
-        }
+        public bool Contains(T item) => Enumerable.Contains(this, item);
 
         public bool Remove(T item)
         {
@@ -78,7 +67,6 @@ namespace IndexedDB.Blazor
             if (internalItem != null)
             {
                 internalItem.State = EntityState.Deleted;
-
                 return true;
             }
             // If reference was lost search for pk, increases the required time
@@ -104,18 +92,9 @@ namespace IndexedDB.Blazor
             return false;
         }
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            return this.internalItems.Select(x => x.Instance).GetEnumerator();
-        }
+        public IEnumerator<T> GetEnumerator() => internalItems.Select(x => x.Instance).GetEnumerator();
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            var enumerator = this.GetEnumerator();
-
-            return enumerator;
-        }
-
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         // ToDo: replace change tracker with better alternative 
         internal IEnumerable<IndexedEntity> GetChanged()
         {
@@ -124,9 +103,7 @@ namespace IndexedDB.Blazor
                 item.DetectChanges();
 
                 if (item.State == EntityState.Unchanged)
-                {
                     continue;
-                }
 
                 Debug.WriteLine("Item yield");
                 yield return item;

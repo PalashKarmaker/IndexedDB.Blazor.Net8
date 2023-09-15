@@ -38,6 +38,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.0-rc.1.23421.29" />
 		<PackageReference Include="TG.Blazor.IndexedDB" Version="1.5.0-preview" />
+		<PackageReference Include="Utility.Disposable" Version="1.0.0" />
 	</ItemGroup>
 
 </Project>

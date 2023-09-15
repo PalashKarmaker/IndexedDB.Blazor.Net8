@@ -6,10 +6,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics;
 using System.Reflection;
 using TG.Blazor.IndexedDB;
+using Utility;
 
 namespace IndexedDB.Blazor
 {
-    public abstract class IndexedDb : IDisposable
+    public abstract class IndexedDb : Disposable
     {
         private readonly Task init;
 
@@ -38,10 +39,7 @@ namespace IndexedDB.Blazor
             this.connector.ActionCompleted += Connector_ActionCompleted;
         }
 
-        private void Connector_ActionCompleted(object sender, IndexedDBNotificationArgs e)
-        {
-            Debug.WriteLine(e.Message);
-        }
+        private void Connector_ActionCompleted(object sender, IndexedDBNotificationArgs e) => Debug.WriteLine(e.Message);
 
         /// <summary>
         /// The database name
@@ -57,7 +55,7 @@ namespace IndexedDB.Blazor
         {
             Debug.WriteLine("Waiting for connection...");
 
-            await Task.WhenAll(this.init);
+            await this.init;
 
             Debug.WriteLine("Connected with " + (this.init.IsFaulted ? "Error" : "Success"));
 
@@ -110,14 +108,10 @@ namespace IndexedDB.Blazor
 
             Debug.WriteLine($"All changes saved");
         }
-
         /// <summary>
         /// Disposal of any managed / unmanaged ressource
         /// </summary>
-        public void Dispose()
-        {
-            this.init?.Dispose();
-        }
+        public override void ReleaseResources() => this.init?.Dispose();
 
         /// <summary>
         /// Builds the schema
@@ -149,9 +143,7 @@ namespace IndexedDB.Blazor
                 {
                     // If any non supported object is used throw exception here
                     if (property.PropertyType.IsGenericType && !property.PropertyType.Namespace.StartsWith("System"))
-                    {
                         throw new NotSupportedException(property.PropertyType.FullName);
-                    }
 
                     // Get attributes from the entity property, ergo column
                     var attributes = property.CustomAttributes;
@@ -163,28 +155,19 @@ namespace IndexedDB.Blazor
 
                     // Check for settings via attributes here (additonal attributes have to be checked here)
                     if (attributes.Any(x => x.AttributeType == typeof(KeyAttribute)))
-                    {
                         id = true;
-                    }
                     if (attributes.Any(x => x.AttributeType == typeof(UniqueAttribute)))
-                    {
                         unique = true;
-                    }
                     if (attributes.Any(x => x.AttributeType == typeof(AutoIncrementAttribute)))
-                    {
                         autoIncrement = true;
-                    }
                     if (attributes.Any(x => x.AttributeType == typeof(ForeignKeyAttribute)))
                     {
                         if (id)
-                        {
                             throw new NotSupportedException("PK cannot be FK");
-                        }
-
                         foreignKey = true;
                     }
 
-                    var columnName = this.FirstToLower(property.Name);
+                    var columnName = FirstToLower(property.Name);
                     // Define index
                     var index = new IndexSpec { Name = columnName, KeyPath = columnName, Auto = autoIncrement, Unique = unique };
 
@@ -193,9 +176,7 @@ namespace IndexedDB.Blazor
                     {
                         // Throw invalid operation when index has already been defined
                         if (schema.PrimaryKey != null)
-                        {
                             throw new InvalidOperationException("PK already defined");
-                        }
 
                         Debug.WriteLine($"{nameof(IndexedDb)} - {schemaProperty.Name} - PK-> {columnName}");
 
@@ -205,7 +186,6 @@ namespace IndexedDB.Blazor
                     else if (!foreignKey)
                     {
                         Debug.WriteLine($"{nameof(IndexedDb)} - {schemaProperty.Name} - Property -> {columnName}");
-
                         schema.Indexes.Add(index);
                     }
                 }
@@ -214,7 +194,7 @@ namespace IndexedDB.Blazor
                 if (schema.PrimaryKey == null)
                 {
                     var idPropertyName = "Id";
-                    var idColumnName = this.FirstToLower(idPropertyName);
+                    var idColumnName = FirstToLower(idPropertyName);
 
                     // Check for registered id property without declared key attribute
                     if (properties.Any(x => x.Name == idPropertyName))
@@ -249,13 +229,10 @@ namespace IndexedDB.Blazor
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        private string FirstToLower(string input)
+        private static string FirstToLower(string input)
         {
             if (input != string.Empty && char.IsUpper(input[0]))
-            {
-                input = char.ToLower(input[0]) + input.Substring(1);
-            }
-
+                input = char.ToLower(input[0]) + input[1..];
             return input;
         }
 
@@ -271,7 +248,7 @@ namespace IndexedDB.Blazor
 
             var storePk = this.connector.Stores.Single(x => x.Name == tableName).PrimaryKey.KeyPath;
 
-            return rowType.GetProperties().Single(x => this.FirstToLower(x.Name) == storePk);
+            return rowType.GetProperties().Single(x => FirstToLower(x.Name) == storePk);
         }
 
         private async Task LoadData()
@@ -299,11 +276,9 @@ namespace IndexedDB.Blazor
 
         private async Task<object> GetRows(Type propertyType, string storeName)
         {
-            MethodInfo method = this.connector.GetType().GetMethod(nameof(this.connector.GetRecords));
+            MethodInfo method = connector.GetType().GetMethod(nameof(connector.GetRecords));
             MethodInfo generic = method.MakeGenericMethod(propertyType);
-            var records = await generic.InvokeAsyncWithResult(this.connector, new object[] { storeName });
-
-            return records;
+            return await generic.InvokeAsyncWithResult(this.connector, new object[] { storeName });
         }
 
         /// <summary>
@@ -313,12 +288,8 @@ namespace IndexedDB.Blazor
         /// <param name="data"></param>
         /// <param name="pkProperty"></param>
         /// <returns></returns>
-        private async Task DeleteRow(string storeName, object data, PropertyInfo pkProperty)
-        {
-            var pkValue = pkProperty.GetValue(data);
-
-            await this.connector.DeleteRecord<object>(storeName, pkValue);
-        }
+        private async Task DeleteRow(string storeName, object data, PropertyInfo pkProperty) => 
+            await connector.DeleteRecord<object>(storeName, pkProperty.GetValue(data));
 
         /// <summary>
         /// Adds a row to the store
@@ -328,7 +299,7 @@ namespace IndexedDB.Blazor
         /// <returns></returns>
         private async Task AddRow(string storeName, object data)
         {
-            var storeRecord = this.ConvertToObjectRecord(storeName, data);
+            var storeRecord = ConvertToObjectRecord(storeName, data);
 
             await this.connector.AddRecord<object>(storeRecord);
 
@@ -352,17 +323,12 @@ namespace IndexedDB.Blazor
         /// <param name="storeName"></param>
         /// <param name="data"></param>
         /// <returns></returns>
-        private async Task ChangeRow(string storeName, object data)
-        {
-            var storeRecord = this.ConvertToObjectRecord(storeName, data);
-
-            await this.connector.UpdateRecord<object>(storeRecord);
-        }
+        private async Task ChangeRow(string storeName, object data) => await connector.UpdateRecord(ConvertToObjectRecord(storeName, data));
 
         // Only required to save to database, resolve will be = to object properties
         // Because -> Obj Person {"FirstName":"A","LastName":"B"} = Dictionary<string, object> {"FirstName":"A","LastName":"B"}
         // Usage dictionary instead of type for the possibility of ignoring properties, eg ForeignKeyAttribute properties
-        private StoreRecord<object> ConvertToObjectRecord(string storeName, object data)
+        private static StoreRecord<object> ConvertToObjectRecord(string storeName, object data)
         {
             var properties = data.GetType().GetProperties().Where(x => x.CustomAttributes.All(y => y.AttributeType != typeof(ForeignKeyAttribute)));
 
@@ -370,7 +336,7 @@ namespace IndexedDB.Blazor
 
             foreach (var property in properties)
             {
-                var propertyNameInStore = this.FirstToLower(property.Name);
+                var propertyNameInStore = FirstToLower(property.Name);
 
                 keyValueData.Add(propertyNameInStore, property.GetValue(data));
             }

@@ -9,24 +9,24 @@ namespace IndexedDB.Blazor
 
         internal IndexedEntity(T instance) : base(instance)
         {
-            this.snapshot = new Dictionary<string, int>();
+            snapshot = new Dictionary<string, int>();
 
-            this.TakeSnapshot();
+            TakeSnapshot();
         }
 
         internal new T Instance => (T)base.Instance;
 
         internal void TakeSnapshot()
         {
-            this.snapshot.Clear();
+            snapshot.Clear();
 
             var properties = typeof(T).GetProperties();
 
             foreach (var property in properties)
             {
-                var code = property.GetValue(this.Instance)?.GetHashCode() ?? defaultHashCode;
+                var code = property.GetValue(Instance)?.GetHashCode() ?? defaultHashCode;
                 // ToDo: Check if GetHashCode collisions may occour and its severity
-                this.snapshot.Add(property.Name, code);
+                snapshot.Add(property.Name, code);
                 Debug.WriteLine($"Took snapshot of property {property.Name} with code {code}");
             }
         }
@@ -48,21 +48,16 @@ namespace IndexedDB.Blazor
 
                 // ToDo: Check if GetHashCode collisions may occour and its severity
                 if (originalValue == (property.GetValue(this.Instance)?.GetHashCode() ?? defaultHashCode))
-                {
                     continue;
-                }
 
-                this.State = EntityState.Modified;
+                State = EntityState.Modified;
             }
         }
     }
 
     internal abstract class IndexedEntity
     {
-        internal IndexedEntity(object instance)
-        {
-            this.Instance = instance;
-        }
+        internal IndexedEntity(object instance) => Instance = instance;
 
         internal EntityState State { get; set; }
 

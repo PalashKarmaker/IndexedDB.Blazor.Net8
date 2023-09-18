@@ -19,7 +19,7 @@ namespace IndexedDB.Blazor
         public IndexedSet(IEnumerable<T> records, PropertyInfo primaryKey)
         {
             this.primaryKey = primaryKey;
-            internalItems = new List<IndexedEntity<T>>();
+            internalItems = [];
 
             if (records == null)
                 return;
@@ -27,10 +27,7 @@ namespace IndexedDB.Blazor
             Debug.WriteLine($"{nameof(IndexedEntity)} - Construct - Add records");
 
             foreach (var item in records)
-                internalItems.Add(new IndexedEntity<T>(item)
-                {
-                    State = EntityState.Unchanged
-                });
+                internalItems.Add(new(item) { State = EntityState.Unchanged });
 
             Debug.WriteLine($"{nameof(IndexedEntity)} - Construct - Add records DONE");
         }
@@ -45,24 +42,22 @@ namespace IndexedDB.Blazor
             {
                 Debug.WriteLine($"{nameof(IndexedEntity)} - Added item of type {typeof(T).Name}");
 
-                internalItems.Add(new IndexedEntity<T>(item)
-                {
-                    State = EntityState.Added
-                });
+                internalItems.Add(new(item) { State = EntityState.Added });
             }
         }
 
         public void Clear()
         {
-            foreach (var item in this)
-                Remove(item);
+            //modified
+            foreach (var item in internalItems)
+                item.State = EntityState.Deleted;
         }
 
         public bool Contains(T item) => Enumerable.Contains(this, item);
 
         public bool Remove(T item)
         {
-            var internalItem = this.internalItems.FirstOrDefault(x => x.Instance.Equals(item));
+            var internalItem = internalItems.FirstOrDefault(x => x.Instance.Equals(item));
 
             if (internalItem != null)
             {
@@ -76,7 +71,7 @@ namespace IndexedDB.Blazor
 
                 var value = primaryKey.GetValue(item);
 
-                internalItem = this.internalItems.FirstOrDefault(x => primaryKey.GetValue(x.Instance).Equals(value));
+                internalItem = internalItems.FirstOrDefault(x => primaryKey.GetValue(x.Instance).Equals(value));
 
                 if (internalItem != null)
                 {

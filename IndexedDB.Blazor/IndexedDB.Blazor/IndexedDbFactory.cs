@@ -71,9 +71,7 @@ namespace IndexedDB.Blazor
             var connected = await instance.WaitForConnection();
 
             if (!connected)
-            {
                 throw new Exception("Could not connect");
-            }
 
             return instance;
         }

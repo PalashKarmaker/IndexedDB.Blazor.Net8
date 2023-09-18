@@ -18,25 +18,25 @@ namespace IndexedDB.Blazor
 
         public IndexedDb(IJSRuntime jSRuntime, string name, int version)
         {
-            this.Version = version;
-            this.Name = name;
+            Version = version;
+            Name = name;
 
-            var dbStore = new DbStore()
+            var dbStore = new DbStore
             {
-                DbName = this.Name,
-                Version = this.Version,
+                DbName = Name,
+                Version = Version,
             };
 
             Debug.WriteLine($"{nameof(IndexedDb)} - Building database {name} V{version}");
-            this.Build(dbStore);
+            Build(dbStore);
 
             Debug.WriteLine($"{nameof(IndexedDb)} - Opening connector");
-            this.connector = new IndexedDBManager(dbStore, jSRuntime);
+            connector = new IndexedDBManager(dbStore, jSRuntime);
 
             Debug.WriteLine($"{nameof(IndexedDb)} - Loading data");
-            this.init = this.LoadData();
+            init = LoadDataAsync();
 
-            this.connector.ActionCompleted += Connector_ActionCompleted;
+            connector.ActionCompleted += Connector_ActionCompleted;
         }
 
         private void Connector_ActionCompleted(object sender, IndexedDBNotificationArgs e) => Debug.WriteLine(e.Message);
@@ -55,7 +55,7 @@ namespace IndexedDB.Blazor
         {
             Debug.WriteLine("Waiting for connection...");
 
-            await this.init;
+            await init;
 
             Debug.WriteLine("Connected with " + (this.init.IsFaulted ? "Error" : "Success"));
 
@@ -86,18 +86,16 @@ namespace IndexedDB.Blazor
                         case EntityState.Unchanged:
                             continue;
                         case EntityState.Added:
-                            await this.AddRow(table.Name, row.Instance);
+                            await AddRow(table.Name, row.Instance);
                             break;
                         case EntityState.Deleted:
                             if (pkProperty == null)
-                            {
-                                pkProperty = this.GetPrimaryKey(row.Instance.GetType(), table.Name);
-                            }
+                                pkProperty = GetPrimaryKey(row.Instance.GetType(), table.Name);
 
-                            await this.DeleteRow(table.Name, row.Instance, pkProperty);
+                            await DeleteRow(table.Name, row.Instance, pkProperty);
                             break;
                         case EntityState.Modified:
-                            await this.ChangeRow(table.Name, row.Instance);
+                            await ChangeRow(table.Name, row.Instance);
                             break;
                         default:
                             throw new NotSupportedException();
@@ -251,10 +249,10 @@ namespace IndexedDB.Blazor
             return rowType.GetProperties().Single(x => FirstToLower(x.Name) == storePk);
         }
 
-        private async Task LoadData()
+        private async Task LoadDataAsync()
         {
             // Get all tables
-            var tables = this.GetType().GetProperties()
+            var tables = GetType().GetProperties()
                 .Where(x => x.PropertyType.IsGenericType && x.PropertyType.GetGenericTypeDefinition() == typeof(IndexedSet<>));
 
             foreach (var table in tables)
@@ -270,13 +268,14 @@ namespace IndexedDB.Blazor
 
                 Debug.WriteLine($"{nameof(IndexedDb)} - Set table {table.Name}");
                 table.SetValue(this, Activator.CreateInstance(table.PropertyType, records, pkProperty));
-
             }
         }
 
         private async Task<object> GetRows(Type propertyType, string storeName)
         {
-            MethodInfo method = connector.GetType().GetMethod(nameof(connector.GetRecords));
+            if (connector == null)
+                throw new NullReferenceException();
+            MethodInfo method = connector.GetType().GetMethod(nameof(connector.GetRecords))!;
             MethodInfo generic = method.MakeGenericMethod(propertyType);
             return await generic.InvokeAsyncWithResult(this.connector, new object[] { storeName });
         }
@@ -301,7 +300,7 @@ namespace IndexedDB.Blazor
         {
             var storeRecord = ConvertToObjectRecord(storeName, data);
 
-            await this.connector.AddRecord<object>(storeRecord);
+            await connector.AddRecord(storeRecord);
 
             // TODO: OLD GENERIC IMPLEMENTATION / REMOVE
             //Type[] typeArgs = { data.GetType() };
@@ -338,7 +337,7 @@ namespace IndexedDB.Blazor
             {
                 var propertyNameInStore = FirstToLower(property.Name);
 
-                keyValueData.Add(propertyNameInStore, property.GetValue(data));
+                keyValueData.Add(propertyNameInStore, property.GetValue(data)!);
             }
 
             var storeRecord = new StoreRecord<object>()
